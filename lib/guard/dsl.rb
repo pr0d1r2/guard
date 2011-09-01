@@ -133,6 +133,9 @@ module Guard
     def watch(pattern, &action)
       @watchers << ::Guard::Watcher.new(pattern, action)
     end
-
+    
+    def ignore_paths(*paths)
+      ::Guard.listener.ignore_paths += paths
+    end
   end
 end

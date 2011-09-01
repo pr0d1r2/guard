@@ -17,7 +17,6 @@ module Guard
       @listener = Listener.select_and_init(@options[:watchdir] ? File.expand_path(@options[:watchdir]) : Dir.pwd)
       @groups   = [:default]
       @guards   = []
-
       @options[:notify] && ENV["GUARD_NOTIFY"] != 'false' ? Notifier.turn_on : Notifier.turn_off
 
       UI.clear if @options[:clear]

@@ -11,7 +11,8 @@ module Guard
   class Listener
     
     attr_reader :directory
-
+    attr_accessor :ignore_paths
+    
     def self.select_and_init(*a)
       if mac? && Darwin.usable?
         Darwin.new(*a)
@@ -29,6 +30,7 @@ module Guard
       @directory           = directory.to_s
       @sha1_checksums_hash = {}
       @relativize_paths    = options.fetch(:relativize_paths, true)
+      self.ignore_paths    = %w[. .. .bundle .git log tmp vendor]
       update_last_event
     end
 
@@ -81,10 +83,8 @@ module Guard
   private
 
     def potentially_modified_files(dirs, options={})
-      paths = Dir.glob(dirs.map { |d| "#{d.sub(%r{/+$}, '')}/*" }, File::FNM_DOTMATCH).reject do |path|
-        %w[. .. .bundle .git log tmp vendor].include?(File.basename(path))
-      end
-
+      paths = exclude_ignore_paths(dirs)
+      
       if options[:all]
         paths.inject([]) do |array, path|
           if File.file?(path)
@@ -98,7 +98,17 @@ module Guard
         paths.select { |path| File.file?(path) }
       end
     end
-
+    
+    def exclude_ignore_paths(dirs)
+      depth = ignore_paths.map{|p| p.count '/' }.max + 1
+      dirs.map do |dir|
+        Dir.glob("#{dir.sub(%r{/+$}, '')}#{'/*' * depth}", File::FNM_DOTMATCH).reject do |path|
+          path = path.sub(%r{^#{dir}/}, '')
+          ignore_paths.any? {|ignore| path =~ /^#{Regexp.escape ignore}($|\/)/ }
+        end
+      end.flatten.uniq
+    end
+    
     # Depending on the filesystem, mtime is probably only precise to the second, so round
     # both values down to the second for the comparison.
     def file_modified?(path)
